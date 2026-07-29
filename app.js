@@ -572,9 +572,9 @@ function renderTasks() {
   grid.innerHTML = "";
   const activeTasks = state.tasks.filter((task) => task.active);
   const generalVoiceButton = $("childGeneralVoiceButton");
-  generalVoiceButton.textContent = state.voiceMessages.child ? "🎙️ Mesajı yeniden kaydet" : "🎙️ Anne'ye sesli not bırak";
+  generalVoiceButton.textContent = state.voiceMessages.child ? "🎙️ Mesajı yeniden kaydet" : "🎙️ Baba'ya sesli not bırak";
   generalVoiceButton.onclick = () => toggleVoiceNoteRecording("general-child", generalVoiceButton, "child", { general: true });
-  renderVoiceNotePlayer($("parentGeneralVoicePlayer"), "general-parent", state.voiceMessages, "parent", "Anne'den sesli not");
+  renderVoiceNotePlayer($("parentGeneralVoicePlayer"), "general-parent", state.voiceMessages, "parent", "Baba'dan sesli not");
   activeTasks.forEach((task) => {
     const record = taskRecord(task.id);
     const status = normalizeTaskStatus(record.status);
