@@ -165,7 +165,7 @@ function emptyState() {
     },
     lastDailyReset: today,
     lastMorningAnimation: "",
-    voiceMessages: { child: null, parent: null },
+    voiceMessages: { child: [], parent: [] },
     undoHistory: []
   };
 }
@@ -208,7 +208,12 @@ function normalizeState(raw) {
   merged.map.placed = Array.isArray(merged.map.placed) ? merged.map.placed : [];
   merged.train = { ...base.train, ...(raw.train || {}) };
   merged.train.wagons = Array.isArray(merged.train.wagons) ? merged.train.wagons : [];
-  merged.voiceMessages = { child: null, parent: null, ...(raw.voiceMessages || {}) };
+  const oldVoiceMessages = raw.voiceMessages || {};
+  const toVoiceMessageList = (value) => Array.isArray(value) ? value.filter(Boolean) : (value?.key ? [value] : []);
+  merged.voiceMessages = {
+    child: toVoiceMessageList(oldVoiceMessages.child),
+    parent: toVoiceMessageList(oldVoiceMessages.parent)
+  };
   merged.undoHistory = Array.isArray(raw.undoHistory) ? raw.undoHistory : [];
   merged.balance = Math.max(0, Number(raw.balance) || 0);
   merged.parentPinHash = raw.parentPinHash || "";
@@ -572,10 +577,10 @@ function renderTasks() {
   grid.innerHTML = "";
   const activeTasks = state.tasks.filter((task) => task.active);
   const generalVoiceButton = $("childGeneralVoiceButton");
-  generalVoiceButton.textContent = state.voiceMessages.child ? "🎙️ Mesajı yeniden kaydet" : "🎙️ Baba'ya sesli not bırak";
+  generalVoiceButton.textContent = generalVoiceMessages("child").length ? "🎙️ Yeni mesaj kaydet" : "🎙️ Baba'ya sesli not bırak";
   generalVoiceButton.onclick = () => toggleVoiceNoteRecording("general-child", generalVoiceButton, "child", { general: true });
-  renderVoiceNotePlayer($("childGeneralVoicePlayer"), "general-child", state.voiceMessages, "child", "Gönderdiğin sesli not");
-  renderVoiceNotePlayer($("parentGeneralVoicePlayer"), "general-parent", state.voiceMessages, "parent", "🔔 Baba'dan sesli not var");
+  renderGeneralVoiceMessages($("childGeneralVoicePlayer"), "child", "Gönderdiğin sesli notlar");
+  renderGeneralVoiceMessages($("parentGeneralVoicePlayer"), "parent", "🔔 Baba'dan sesli notlar");
   activeTasks.forEach((task) => {
     const record = taskRecord(task.id);
     const status = normalizeTaskStatus(record.status);
@@ -622,6 +627,11 @@ function renderTasks() {
 
 function voiceNoteKey(taskId, record, field = "voiceNote") {
   return record?.[field]?.key || `${istanbulDateKey()}-${taskId}-${field}`;
+}
+
+function generalVoiceMessages(field) {
+  if (!Array.isArray(state.voiceMessages?.[field])) state.voiceMessages[field] = [];
+  return state.voiceMessages[field];
 }
 
 function openVoiceNotesDb() {
@@ -696,10 +706,12 @@ async function toggleVoiceNoteRecording(taskId, button, field = "voiceNote", opt
         render();
         return;
       }
-      const key = options.general ? `general-${field}` : voiceNoteKey(taskId, record, field);
+      const key = options.general ? `general-${field}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}` : voiceNoteKey(taskId, record, field);
       try {
         await saveVoiceNote(key, blob);
-        record[field] = { key, createdAt: new Date().toISOString(), mimeType: blob.type };
+        const note = { key, createdAt: new Date().toISOString(), mimeType: blob.type };
+        if (options.general) generalVoiceMessages(field).push(note);
+        else record[field] = note;
         saveState();
         showToast(options.general
           ? (field === "parent" ? "Sesli not Rüzgar için kaydedildi." : "Sesli not ebeveyn için kaydedildi.")
@@ -737,6 +749,22 @@ async function renderVoiceNotePlayer(container, taskId, record, field = "voiceNo
   } catch {
     container.innerHTML = `<p class="helper-text">Ses kaydı açılamadı.</p>`;
   }
+}
+
+function renderGeneralVoiceMessages(container, field, label) {
+  const messages = generalVoiceMessages(field);
+  container.innerHTML = "";
+  if (!messages.length) return;
+  const heading = document.createElement("p");
+  heading.className = "voice-note-label";
+  heading.textContent = `🎧 ${label} (${messages.length})`;
+  container.appendChild(heading);
+  messages.slice().reverse().forEach((message, index) => {
+    const item = document.createElement("div");
+    item.className = "voice-message-item";
+    container.appendChild(item);
+    renderVoiceNotePlayer(item, "general", { message }, "message", `${index + 1}. mesaj`);
+  });
 }
 
 function isRetryRecord(record) {
@@ -1323,10 +1351,10 @@ function renderParent() {
   if (adultActive) {
     renderApprovalSummary();
     const parentVoiceButton = $("parentGeneralVoiceButton");
-    parentVoiceButton.textContent = state.voiceMessages.parent ? "🎙️ Mesajı yeniden kaydet" : "🎙️ Rüzgar'a sesli not bırak";
+    parentVoiceButton.textContent = generalVoiceMessages("parent").length ? "🎙️ Yeni mesaj kaydet" : "🎙️ Rüzgar'a sesli not bırak";
     parentVoiceButton.onclick = () => toggleVoiceNoteRecording("general-parent", parentVoiceButton, "parent", { general: true });
-    renderVoiceNotePlayer($("parentChildVoicePlayer"), "general-child", state.voiceMessages, "child", "🔔 Rüzgar'ın sesli notu var");
-    renderVoiceNotePlayer($("parentOwnVoicePlayer"), "general-parent", state.voiceMessages, "parent", "Gönderdiğin sesli not");
+    renderGeneralVoiceMessages($("parentChildVoicePlayer"), "child", "🔔 Rüzgar'ın sesli notları");
+    renderGeneralVoiceMessages($("parentOwnVoicePlayer"), "parent", "Gönderdiğin sesli notlar");
     renderPendingApprovals();
     renderBonuses();
   }

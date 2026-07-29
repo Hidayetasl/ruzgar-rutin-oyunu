@@ -925,6 +925,15 @@ select {
   margin-top: 8px;
 }
 
+.voice-message-item {
+  margin-top: 6px;
+}
+
+.voice-message-item .voice-note-label {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
 @keyframes voice-pulse {
   50% { transform: scale(0.98); }
 }
