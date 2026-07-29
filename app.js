@@ -7,6 +7,7 @@ const MAX_DAILY_TOTAL_POINTS = 10;
 const ADULT_SESSION_MS = 10 * 60 * 1000;
 const VOICE_NOTES_DB = "ruzgar-gorev-treni-voice-notes";
 const VOICE_NOTES_STORE = "notes";
+const DAILY_VOICE_TASK_ID = "daily-voice-story";
 
 const TASK_ICONS = ["🧼", "🪥", "👏", "🍽️", "🧸", "🚽", "🌙", "⭐", "🚂", "🏠", "🌳"];
 
@@ -24,7 +25,15 @@ const DEFAULT_TASKS = [
   },
   { id: "tidy-toys", title: "Oyuncaklarımı topladım", icon: "🧸", reward: 1, active: true },
   { id: "evening-toilet", title: "Akşam tuvalete gittim", icon: "🚽", reward: 1, active: true },
-  { id: "evening-ready", title: "Dişlerimi fırçalayıp yatağa hazırlandım", icon: "🌙", reward: 1, active: true }
+  { id: "evening-ready", title: "Dişlerimi fırçalayıp yatağa hazırlandım", icon: "🌙", reward: 1, active: true },
+  {
+    id: DAILY_VOICE_TASK_ID,
+    title: "Günümü sesli anlattım",
+    description: "Günün nasıl geçtiğini, en sevdiğin anı veya yarın ne yapmak istediğini sesli anlat.",
+    icon: "🎙️",
+    reward: 1,
+    active: true
+  }
 ];
 
 const DEFAULT_SHOP_ITEMS = [
@@ -190,6 +199,8 @@ function normalizeState(raw) {
   merged.profile = { ...base.profile, ...(raw.profile || {}) };
   merged.settings = { ...base.settings, ...(raw.settings || {}) };
   merged.tasks = Array.isArray(raw.tasks) ? raw.tasks : base.tasks;
+  const dailyVoiceTask = DEFAULT_TASKS.find((task) => task.id === DAILY_VOICE_TASK_ID);
+  if (!merged.tasks.some((task) => task.id === DAILY_VOICE_TASK_ID)) merged.tasks.push(clone(dailyVoiceTask));
   merged.dailyCompletions = normalizeCompletions(raw.dailyCompletions || {});
   merged.dailyBonuses = normalizeDailyBonuses(raw.dailyBonuses || {});
   merged.transactions = normalizeTransactions(Array.isArray(raw.transactions) ? raw.transactions : []);
@@ -584,6 +595,7 @@ function renderTasks() {
   activeTasks.forEach((task) => {
     const record = taskRecord(task.id);
     const status = normalizeTaskStatus(record.status);
+    const isDailyVoiceTask = task.id === DAILY_VOICE_TASK_ID;
     const card = document.createElement("article");
     card.className = `task-card task-${status}${status === "approved" ? " done" : ""}${isRetryRecord(record) ? " retry" : ""}`;
     const canAddVoiceNote = status === "pendingApproval";
@@ -591,13 +603,19 @@ function renderTasks() {
       <button class="task-icon" type="button" aria-label="${escapeHtml(task.title)} seslendir">${task.icon}</button>
       <h3>${escapeHtml(task.title)}</h3>
       <p class="task-status">${taskStatusIcon(record)} ${escapeHtml(taskStatusText(record))}</p>
-      <button class="complete-button" type="button" ${status !== "available" ? "disabled" : ""}>${taskButtonText(record)}</button>
+      <button class="complete-button" type="button" ${status !== "available" ? "disabled" : ""}>${isDailyVoiceTask && status === "available" ? "🎙️ Günümü anlat" : taskButtonText(record)}</button>
       ${canAddVoiceNote ? `<button class="voice-note-button" type="button">${record.voiceNote ? "🎙️ Sesi yeniden kaydet" : "🎙️ Sesli not kaydet"}</button>` : ""}
       ${canAddVoiceNote && record.voiceNote ? `<p class="voice-note-hint">🎧 Sesli not ebeveynin dinlemesi için hazır.</p>` : ""}
       ${record.parentVoiceNote ? `<div class="parent-voice-note-player"></div>` : ""}
     `;
     card.querySelector(".task-icon").addEventListener("click", () => speak(task.description || task.title));
-    card.querySelector(".complete-button").addEventListener("click", () => requestTaskApproval(task.id, card));
+    card.querySelector(".complete-button").addEventListener("click", () => {
+      if (isDailyVoiceTask && status === "available") {
+        toggleVoiceNoteRecording(task.id, card.querySelector(".complete-button"), "voiceNote", { autoSubmit: true, card });
+        return;
+      }
+      requestTaskApproval(task.id, card);
+    });
     const voiceButton = card.querySelector(".voice-note-button");
     if (voiceButton) voiceButton.addEventListener("click", () => toggleVoiceNoteRecording(task.id, voiceButton));
     const parentVoicePlayer = card.querySelector(".parent-voice-note-player");
@@ -700,7 +718,8 @@ async function toggleVoiceNoteRecording(taskId, button, field = "voiceNote", opt
         render();
         return;
       }
-      const record = options.general ? state.voiceMessages : taskRecord(taskId);
+      let record = options.general ? state.voiceMessages : taskRecord(taskId);
+      const shouldSubmitAfterSave = options.autoSubmit && record?.status === "available";
       if (!options.general && (!record || record.status !== "pendingApproval")) {
         showToast("Bu görev artık kontrol beklemiyor.");
         render();
@@ -711,7 +730,13 @@ async function toggleVoiceNoteRecording(taskId, button, field = "voiceNote", opt
         await saveVoiceNote(key, blob);
         const note = { key, createdAt: new Date().toISOString(), mimeType: blob.type };
         if (options.general) generalVoiceMessages(field).push(note);
-        else record[field] = note;
+        else {
+          if (shouldSubmitAfterSave) {
+            requestTaskApproval(taskId, options.card || document.createElement("div"));
+            record = taskRecord(taskId);
+          }
+          record[field] = note;
+        }
         saveState();
         showToast(options.general
           ? (field === "parent" ? "Sesli not Rüzgar için kaydedildi." : "Sesli not ebeveyn için kaydedildi.")
