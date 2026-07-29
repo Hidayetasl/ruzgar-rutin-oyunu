@@ -1,0 +1,21 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "operations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "familyId", "order": "ASCENDING" },
+        { "fieldPath": "clientCreatedAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "taskSubmissions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "date", "order": "ASCENDING" },
+        { "fieldPath": "taskId", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Rüzgar'ın Görev Treni ikonu">
+  <rect width="512" height="512" rx="112" fill="#7bd86c"/>
+  <path d="M0 0h512v250H0z" fill="#9edfff"/>
+  <circle cx="400" cy="110" r="50" fill="#ffd45c"/>
+  <path d="M80 350h352" stroke="#735848" stroke-width="28" stroke-linecap="round"/>
+  <path d="M100 378h312" stroke="#a6744f" stroke-width="18" stroke-linecap="round" stroke-dasharray="16 22"/>
+  <rect x="105" y="215" width="180" height="104" rx="26" fill="#1769e0"/>
+  <rect x="255" y="250" width="96" height="69" rx="20" fill="#f55f4d"/>
+  <rect x="124" y="235" width="48" height="38" rx="10" fill="#e8f8ff"/>
+  <rect x="188" y="235" width="48" height="38" rx="10" fill="#e8f8ff"/>
+  <circle cx="150" cy="325" r="27" fill="#153243"/>
+  <circle cx="288" cy="325" r="27" fill="#153243"/>
+  <circle cx="150" cy="325" r="12" fill="#ffd45c"/>
+  <circle cx="288" cy="325" r="12" fill="#ffd45c"/>
+  <path d="M328 187v55" stroke="#153243" stroke-width="24" stroke-linecap="round"/>
+  <path d="M305 182h60" stroke="#153243" stroke-width="20" stroke-linecap="round"/>
+</svg>

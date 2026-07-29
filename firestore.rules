@@ -1,0 +1,48 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function member(familyId) {
+      return signedIn() && exists(/databases/$(database)/documents/families/$(familyId)/members/$(request.auth.uid));
+    }
+    function role(familyId) {
+      return get(/databases/$(database)/documents/families/$(familyId)/members/$(request.auth.uid)).data.role;
+    }
+    function caregiver(familyId) { return member(familyId) && role(familyId) in ['caregiver', 'admin']; }
+    function admin(familyId) { return member(familyId) && role(familyId) == 'admin'; }
+
+    match /families/{familyId} {
+      allow create: if signedIn() && request.resource.data.createdBy == request.auth.uid;
+      allow read: if member(familyId);
+      allow update: if admin(familyId);
+      allow delete: if false;
+
+      match /members/{memberId} {
+        allow read: if member(familyId);
+        allow create, update, delete: if admin(familyId);
+      }
+      match /devices/{deviceId} {
+        allow read: if member(familyId);
+        allow create: if member(familyId) && request.resource.data.uid == request.auth.uid;
+        allow update, delete: if admin(familyId) || (member(familyId) && resource.data.uid == request.auth.uid);
+      }
+      match /tasks/{taskId} { allow read: if member(familyId); allow write: if caregiver(familyId); }
+      match /settings/{documentId} { allow read: if member(familyId); allow write: if admin(familyId); }
+      match /trainState/{documentId} { allow read: if member(familyId); allow write: if member(familyId); }
+      match /inventory/{itemId} { allow read: if member(familyId); allow write: if caregiver(familyId); }
+      match /mapPlacements/{placementId} { allow read: if member(familyId); allow write: if caregiver(familyId); }
+      match /taskSubmissions/{submissionId} {
+        allow read: if member(familyId);
+        allow create: if member(familyId) && request.resource.data.createdBy == request.auth.uid;
+        allow update: if caregiver(familyId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedBy', 'reviewedAt', 'operationId']);
+        allow delete: if false;
+      }
+      match /approvals/{approvalId} { allow read: if member(familyId); allow create: if caregiver(familyId); allow update, delete: if false; }
+      match /bonusAwards/{awardId} { allow read: if member(familyId); allow create: if caregiver(familyId); allow update, delete: if false; }
+      match /pointTransactions/{transactionId} { allow read: if member(familyId); allow create: if caregiver(familyId); allow update, delete: if false; }
+      match /purchases/{purchaseId} { allow read: if member(familyId); allow create: if caregiver(familyId); allow update, delete: if false; }
+      match /operations/{operationId} { allow read: if member(familyId); allow create: if member(familyId) && request.resource.data.deviceId is string; allow update, delete: if false; }
+      match /pairingCodes/{codeId} { allow read, write: if admin(familyId); }
+    }
+  }
+}

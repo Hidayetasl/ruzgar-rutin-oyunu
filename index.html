@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#4bb3fd" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Görev Treni" />
+    <meta name="description" content="Rüzgar için resimli, sesli ve çevrimdışı çalışan görev treni oyunu." />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="assets/icon-192.png" />
+    <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles.css" />
+    <title>Rüzgar'ın Görev Treni</title>
+  </head>
+  <body>
+    <div id="app" class="app-shell">
+      <header class="topbar">
+        <img class="header-family-photo" src="assets/rb.jpg" alt="Rüzgar ve babası" />
+        <div>
+          <p class="eyebrow">Rüzgar'ın</p>
+          <h1>Görev Treni</h1>
+        </div>
+        <div class="money-badge" aria-live="polite">
+          <span class="coin">◎</span>
+          <strong id="balanceText">0</strong>
+          <span>Tren Parası</span>
+        </div>
+        <button id="parentTopButton" class="icon-button parent-top-button" type="button" aria-label="Ebeveyn">⚙️</button>
+      </header>
+
+      <main>
+        <section class="tabs" aria-label="Uygulama bölümleri">
+          <button class="tab is-active" data-view="tasks" type="button">⭐ Görev</button>
+          <button class="tab" data-view="world" type="button">🚂 Dünya</button>
+          <button class="tab" data-view="shop" type="button">🏪 Mağaza</button>
+          <button id="replayTrainSmall" class="tab" type="button">▶ İzlet</button>
+        </section>
+
+        <section id="tasksView" class="view is-active" aria-labelledby="tasksTitle">
+          <div class="section-heading">
+            <div class="tasks-heading-copy">
+              <p class="eyebrow">Bugün</p>
+              <h2 id="tasksTitle">Görevler</h2>
+            </div>
+            <button class="icon-button task-speak-button" id="speakTitle" type="button" aria-label="Başlığı seslendir">🔊</button>
+          </div>
+          <div id="taskGrid" class="task-grid"></div>
+        </section>
+
+        <section id="worldView" class="view" aria-labelledby="worldTitle">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Benim trenim</p>
+              <h2 id="worldTitle">Tren Dünyası</h2>
+            </div>
+            <button id="replayTrain" class="primary-button" type="button">▶ Trenimi yeniden izlet</button>
+          </div>
+          <div class="world-toolbar">
+            <div id="selectedPieceText" class="helper-text">Yerleştirmek için envanterden parça seç.</div>
+            <button id="cancelPlacement" class="secondary-button is-hidden" type="button">Vazgeç</button>
+          </div>
+          <div class="world-scroll" id="worldScroll">
+            <div class="world-map" id="worldMap" aria-label="Yatay kaydırılabilen tren haritası"></div>
+          </div>
+          <h3 class="compact-title">Envanter</h3>
+          <div id="inventoryList" class="inventory-list"></div>
+        </section>
+
+        <section id="shopView" class="view" aria-labelledby="shopTitle">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Parça al</p>
+              <h2 id="shopTitle">Mağaza</h2>
+            </div>
+            <div class="money-pill">Bakiye: <strong id="shopBalance">0</strong></div>
+          </div>
+          <div id="shopGrid" class="shop-grid"></div>
+        </section>
+
+        <section id="parentView" class="view" aria-labelledby="parentTitle">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Yetişkin alanı</p>
+              <h2 id="parentTitle">Ebeveyn</h2>
+            </div>
+            <button id="parentLockButton" class="secondary-button" type="button">Kilitle</button>
+          </div>
+
+          <div id="pinPanel" class="parent-card">
+            <h3 id="pinTitle">Ebeveyn PIN'i</h3>
+            <p id="pinHint" class="helper-text">İlk kullanım için 4 haneli Ebeveyn PIN'i belirleyin.</p>
+            <div class="pin-row">
+              <input id="pinInput" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" type="password" autocomplete="off" aria-label="Anne PIN'i" />
+              <button id="pinSubmit" class="primary-button" type="button">Devam</button>
+            </div>
+            <button id="resetPinButton" class="secondary-button" type="button">Ebeveyn PIN'ini sıfırla</button>
+          </div>
+
+          <div id="adultLoginPanel" class="parent-card">
+            <h3>Görev Onayı</h3>
+            <p class="helper-text">Onaylayan yetişkini seçin, ardından Ebeveyn PIN'ini girin.</p>
+            <div class="pin-row">
+              <label>Yetişkin
+                <select id="adultProfileSelect"></select>
+              </label>
+              <label>PIN
+                <input id="adultPinInput" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" type="password" autocomplete="off" aria-label="Yetişkin PIN'i" />
+              </label>
+              <button id="adultPinSubmit" class="primary-button" type="button">Onay ekranı</button>
+            </div>
+          </div>
+
+          <div id="adultControls" class="parent-controls is-hidden">
+            <div class="section-heading nested-heading">
+              <div>
+                <p class="eyebrow">Onaylayan</p>
+                <h3 id="activeAdultName">Yetişkin</h3>
+              </div>
+              <button id="adultLockButton" class="secondary-button" type="button">Onayı kilitle</button>
+            </div>
+            <section class="parent-card approval-card">
+              <div class="section-heading nested-heading">
+                <div>
+                  <h3>Bekleyen Görevler</h3>
+                  <p id="dailyLimitText" class="helper-text">Görev 0/7 · Bonus 0/3 · Toplam 0/10</p>
+                </div>
+              </div>
+              <div id="pendingApprovalList" class="approval-list"></div>
+            </section>
+            <section class="parent-card approval-card">
+              <h3>Günün Bonusları</h3>
+              <p class="helper-text">Bugün en fazla 3 bonus seçebilirsin.</p>
+              <div id="bonusList" class="bonus-list"></div>
+              <div class="pin-row bonus-confirm">
+                <p id="selectedBonusText" class="bonus-count">0/3 bonus seçildi</p>
+                <label>PIN
+                  <input id="bonusConfirmPinInput" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" type="password" autocomplete="off" aria-label="Bonus onayı için yetişkin PIN'i" />
+                </label>
+                <button id="confirmBonusesButton" class="primary-button" type="button">Bonusları Onayla</button>
+              </div>
+            </section>
+          </div>
+
+          <div id="parentControls" class="parent-controls is-hidden">
+            <div class="parent-grid">
+              <section class="parent-card">
+                <h3>Görevler</h3>
+                <form id="taskForm" class="stack-form">
+                  <input id="taskId" type="hidden" />
+                  <label>Ad
+                    <input id="taskTitleInput" type="text" required />
+                  </label>
+                  <div class="form-row">
+                    <label>Simge
+                      <select id="taskIconInput"></select>
+                    </label>
+                    <label>Para
+                      <input id="taskRewardInput" min="0" max="9" step="1" type="number" />
+                    </label>
+                  </div>
+                  <label class="check-row">
+                    <input id="taskActiveInput" type="checkbox" checked />
+                    Aktif
+                  </label>
+                  <div class="button-row">
+                    <button class="primary-button" type="submit">Kaydet</button>
+                    <button id="newTaskButton" class="secondary-button" type="button">Yeni</button>
+                    <button id="deleteTaskButton" class="danger-button" type="button">Sil</button>
+                  </div>
+                </form>
+                <div id="taskAdminList" class="admin-list"></div>
+              </section>
+
+              <section class="parent-card">
+                <h3>Mağaza</h3>
+                <div id="shopAdminList" class="admin-list"></div>
+              </section>
+
+              <section class="parent-card">
+                <h3>Yetişkin Profilleri</h3>
+                <form id="adultProfileForm" class="stack-form">
+                  <input id="adultProfileId" type="hidden" />
+                  <label>Ad
+                    <input id="adultProfileNameInput" type="text" />
+                  </label>
+                  <label>Yeni PIN
+                    <input id="adultProfilePinInput" inputmode="numeric" pattern="[0-9]*" maxlength="8" type="password" autocomplete="off" />
+                  </label>
+                  <label class="check-row">
+                    <input id="adultProfileActiveInput" type="checkbox" checked />
+                    Aktif
+                  </label>
+                  <div class="button-row">
+                    <button class="primary-button" type="submit">Kaydet</button>
+                    <button id="newAdultProfileButton" class="secondary-button" type="button">Yeni</button>
+                    <button id="deactivateAdultProfileButton" class="secondary-button" type="button">Pasif yap</button>
+                  </div>
+                </form>
+                <div id="adultProfileAdminList" class="admin-list"></div>
+              </section>
+
+              <section class="parent-card">
+                <h3>Bonus Kategorileri</h3>
+                <p class="helper-text">Günlük bonus üst sınırı: 3</p>
+                <form id="bonusDefinitionForm" class="stack-form">
+                  <input id="bonusDefinitionId" type="hidden" />
+                  <label>Başlık
+                    <input id="bonusTitleInput" type="text" />
+                  </label>
+                  <label>Açıklama
+                    <input id="bonusAdultDescriptionInput" type="text" />
+                  </label>
+                  <label>Çocuk mesajı
+                    <input id="bonusChildMessageInput" type="text" />
+                  </label>
+                  <label class="check-row">
+                    <input id="bonusActiveInput" type="checkbox" checked />
+                    Aktif
+                  </label>
+                  <div class="button-row">
+                    <button class="primary-button" type="submit">Kaydet</button>
+                    <button id="clearBonusDefinitionButton" class="secondary-button" type="button">Temizle</button>
+                  </div>
+                </form>
+                <div id="bonusDefinitionAdminList" class="admin-list"></div>
+              </section>
+
+              <section class="parent-card">
+                <h3>Ayarlar</h3>
+                <label class="check-row">
+                  <input id="soundsToggle" type="checkbox" />
+                  Sesler açık
+                </label>
+                <label class="check-row">
+                  <input id="reduceMotionToggle" type="checkbox" />
+                  Animasyonları azalt
+                </label>
+                <label>Tren Parası düzelt
+                  <input id="balanceAdjustInput" type="number" min="0" step="1" />
+                </label>
+                <div class="button-row">
+                  <button id="balanceAdjustButton" class="primary-button" type="button">Bakiyeyi ayarla</button>
+                  <button id="undoAdminButton" class="secondary-button" type="button">Geri al</button>
+                </div>
+              </section>
+
+              <section class="parent-card">
+                <h3>Yedek ve kayıt</h3>
+                <div class="button-row">
+                  <button id="exportButton" class="primary-button" type="button">JSON dışa aktar</button>
+                  <label class="file-button">
+                    JSON geri yükle
+                    <input id="importInput" type="file" accept="application/json,.json" />
+                  </label>
+                </div>
+                <div class="install-help">
+                  <strong>Ana ekrana ekle:</strong> Telefonda tarayıcı menüsünden Paylaş veya menü düğmesini açıp ana ekrana ekleyin.
+                </div>
+                <h4>İşlem geçmişi</h4>
+                <div id="transactionLog" class="log-list"></div>
+              </section>
+
+              <section class="parent-card danger-zone">
+                <h3>Tüm veriler</h3>
+                <p class="helper-text">Sıfırlama için PIN doğrulaması ve ikinci onay gerekir.</p>
+                <button id="resetButton" class="danger-button" type="button">Tüm verileri sıfırla</button>
+              </section>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div id="toast" class="toast is-hidden" role="status" aria-live="polite"></div>
+
+    <dialog id="bonusInfoDialog" class="app-dialog compact-dialog">
+      <h3 id="bonusInfoTitle">Bonus bilgisi</h3>
+      <p id="bonusInfoText" class="helper-text"></p>
+      <div class="button-row center">
+        <button id="closeBonusInfo" class="primary-button" type="button">Tamam</button>
+      </div>
+    </dialog>
+
+    <dialog id="purchaseDialog" class="app-dialog">
+      <form method="dialog" id="purchaseForm">
+        <h3 id="purchaseTitle">Satın alındı</h3>
+        <p id="purchaseText"></p>
+        <div class="button-row">
+          <button id="placeNowButton" class="primary-button" value="place" type="submit">Şimdi yerleştir</button>
+          <button class="secondary-button" value="later" type="submit">Daha sonra yerleştir</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="morningDialog" class="morning-dialog">
+      <div class="morning-scene">
+        <div class="sun"></div>
+        <div class="morning-track"></div>
+        <div id="morningTrain" class="morning-train">🚂</div>
+      </div>
+      <h2>Günaydın Rüzgar!</h2>
+      <p>Trenin yola çıktı.</p>
+      <div class="button-row center">
+        <button id="closeMorning" class="primary-button" type="button">Başla</button>
+      </div>
+    </dialog>
+
+    <div id="updateBanner" class="update-banner is-hidden">
+      Yeni sürüm hazır.
+      <button id="refreshApp" type="button">Yenile</button>
+    </div>
+
+    <!-- Sürüm parametresi, telefondaki eski service worker önbelleğinin yeni PIN akışını gölgelemesini önler. -->
+    <script type="module" src="app.js?v=20260729-2"></script>
+  </body>
+</html>
