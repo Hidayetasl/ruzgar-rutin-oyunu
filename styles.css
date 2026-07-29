@@ -842,6 +842,57 @@ select {
   white-space: nowrap;
 }
 
+.voice-note-button {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 8px;
+  border: 2px solid #9fd5f4;
+  border-radius: 14px;
+  color: #153243;
+  background: #eef9ff;
+  font-weight: 850;
+}
+
+.voice-note-button.is-recording {
+  border-color: #ed6a5a;
+  color: #8b1e12;
+  background: #fff0ed;
+  animation: voice-pulse 1s ease-in-out infinite;
+}
+
+.voice-note-hint,
+.voice-note-label {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 750;
+}
+
+.voice-note-player {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+.voice-note-player audio,
+.parent-voice-note-player audio {
+  width: 100%;
+  min-height: 40px;
+  margin-top: 4px;
+}
+
+.parent-note-actions {
+  grid-column: 1 / -1;
+}
+
+.parent-voice-note-player {
+  width: 100%;
+  margin-top: 8px;
+}
+
+@keyframes voice-pulse {
+  50% { transform: scale(0.98); }
+}
+
 .admin-row small {
   color: var(--muted);
 }

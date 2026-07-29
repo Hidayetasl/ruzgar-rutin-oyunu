@@ -5,6 +5,8 @@ const MAX_DAILY_TASK_POINTS = 7;
 const MAX_DAILY_BONUS_POINTS = 3;
 const MAX_DAILY_TOTAL_POINTS = 10;
 const ADULT_SESSION_MS = 10 * 60 * 1000;
+const VOICE_NOTES_DB = "ruzgar-gorev-treni-voice-notes";
+const VOICE_NOTES_STORE = "notes";
 
 const TASK_ICONS = ["🧼", "🪥", "👏", "🍽️", "🧸", "🚽", "🌙", "⭐", "🚂", "🏠", "🌳"];
 
@@ -123,6 +125,7 @@ let reviewLocks = new Set();
 let selectedBonusIds = new Set();
 let bonusCommitLock = false;
 let lastBonusInfoButton = null;
+let voiceRecording = null;
 
 const $ = (id) => document.getElementById(id);
 
@@ -571,14 +574,22 @@ function renderTasks() {
     const status = normalizeTaskStatus(record.status);
     const card = document.createElement("article");
     card.className = `task-card task-${status}${status === "approved" ? " done" : ""}${isRetryRecord(record) ? " retry" : ""}`;
+    const canAddVoiceNote = status === "pendingApproval";
     card.innerHTML = `
       <button class="task-icon" type="button" aria-label="${escapeHtml(task.title)} seslendir">${task.icon}</button>
       <h3>${escapeHtml(task.title)}</h3>
       <p class="task-status">${taskStatusIcon(record)} ${escapeHtml(taskStatusText(record))}</p>
       <button class="complete-button" type="button" ${status !== "available" ? "disabled" : ""}>${taskButtonText(record)}</button>
+      ${canAddVoiceNote ? `<button class="voice-note-button" type="button">${record.voiceNote ? "🎙️ Sesi yeniden kaydet" : "🎙️ Sesli not kaydet"}</button>` : ""}
+      ${canAddVoiceNote && record.voiceNote ? `<p class="voice-note-hint">🎧 Sesli not ebeveynin dinlemesi için hazır.</p>` : ""}
+      ${record.parentVoiceNote ? `<div class="parent-voice-note-player"></div>` : ""}
     `;
     card.querySelector(".task-icon").addEventListener("click", () => speak(task.description || task.title));
     card.querySelector(".complete-button").addEventListener("click", () => requestTaskApproval(task.id, card));
+    const voiceButton = card.querySelector(".voice-note-button");
+    if (voiceButton) voiceButton.addEventListener("click", () => toggleVoiceNoteRecording(task.id, voiceButton));
+    const parentVoicePlayer = card.querySelector(".parent-voice-note-player");
+    if (parentVoicePlayer) renderVoiceNotePlayer(parentVoicePlayer, task.id, record, "parentVoiceNote", "Anne'den sesli not");
     grid.appendChild(card);
   });
 
@@ -599,6 +610,123 @@ function renderTasks() {
       <p class="summary-balance">🪙 ${state.balance} Tren Parası</p>
     `;
     grid.appendChild(summary);
+  }
+}
+
+function voiceNoteKey(taskId, record, field = "voiceNote") {
+  return record?.[field]?.key || `${istanbulDateKey()}-${taskId}-${field}`;
+}
+
+function openVoiceNotesDb() {
+  return new Promise((resolve, reject) => {
+    if (!window.indexedDB) {
+      reject(new Error("Bu tarayıcı ses kaydını saklayamıyor."));
+      return;
+    }
+    const request = indexedDB.open(VOICE_NOTES_DB, 1);
+    request.onupgradeneeded = () => request.result.createObjectStore(VOICE_NOTES_STORE);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error("Ses kayıt alanı açılamadı."));
+  });
+}
+
+async function saveVoiceNote(key, blob) {
+  const db = await openVoiceNotesDb();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(VOICE_NOTES_STORE, "readwrite");
+    transaction.objectStore(VOICE_NOTES_STORE).put(blob, key);
+    transaction.oncomplete = () => { db.close(); resolve(); };
+    transaction.onerror = () => { db.close(); reject(transaction.error || new Error("Ses kaydı saklanamadı.")); };
+  });
+}
+
+async function loadVoiceNote(key) {
+  const db = await openVoiceNotesDb();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(VOICE_NOTES_STORE, "readonly");
+    const request = transaction.objectStore(VOICE_NOTES_STORE).get(key);
+    request.onsuccess = () => { db.close(); resolve(request.result || null); };
+    request.onerror = () => { db.close(); reject(request.error || new Error("Ses kaydı okunamadı.")); };
+  });
+}
+
+async function toggleVoiceNoteRecording(taskId, button, field = "voiceNote") {
+  if (voiceRecording?.taskId === taskId) {
+    button.disabled = true;
+    button.textContent = "Kaydediliyor…";
+    voiceRecording.recorder.stop();
+    return;
+  }
+  if (voiceRecording) {
+    showToast("Önce açık ses kaydını bitir.");
+    return;
+  }
+  if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+    showToast("Bu tarayıcıda ses kaydı kullanılamıyor.");
+    return;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const recorder = new MediaRecorder(stream);
+    const chunks = [];
+    voiceRecording = { taskId, recorder, stream, chunks };
+    recorder.ondataavailable = (event) => {
+      if (event.data.size > 0) chunks.push(event.data);
+    };
+    recorder.onstop = async () => {
+      const activeRecording = voiceRecording;
+      voiceRecording = null;
+      stream.getTracks().forEach((track) => track.stop());
+      const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
+      if (blob.size < 200) {
+        showToast("Kayıt çok kısa oldu. Tekrar deneyebilirsin.");
+        render();
+        return;
+      }
+      const record = taskRecord(taskId);
+      if (!record || record.status !== "pendingApproval") {
+        showToast("Bu görev artık kontrol beklemiyor.");
+        render();
+        return;
+      }
+      const key = voiceNoteKey(taskId, record, field);
+      try {
+        await saveVoiceNote(key, blob);
+        record[field] = { key, createdAt: new Date().toISOString(), mimeType: blob.type };
+        saveState();
+        showToast(field === "parentVoiceNote" ? "Sesli not Rüzgar için kaydedildi." : "Sesli not ebeveyn için kaydedildi.");
+      } catch {
+        showToast("Ses kaydı bu cihazda saklanamadı.");
+      }
+      render();
+    };
+    recorder.start();
+    button.textContent = "⏹ Kaydı bitir";
+    button.classList.add("is-recording");
+    showToast("Konuşabilirsin. Bitince Kaydı bitir'e dokun.");
+  } catch {
+    showToast("Mikrofon izni verilmedi veya mikrofon kullanılamıyor.");
+  }
+}
+
+async function renderVoiceNotePlayer(container, taskId, record, field = "voiceNote", label = "Rüzgar'ın sesli notu") {
+  if (!record?.[field]) return;
+  container.innerHTML = `<p class="voice-note-label">🎧 ${label}</p><p class="helper-text">Ses yükleniyor…</p>`;
+  try {
+    const blob = await loadVoiceNote(voiceNoteKey(taskId, record, field));
+    if (!blob) {
+      container.innerHTML = `<p class="helper-text">Bu ses kaydı bu cihazda bulunamadı.</p>`;
+      return;
+    }
+    const audio = document.createElement("audio");
+    audio.controls = true;
+    audio.preload = "metadata";
+    audio.src = URL.createObjectURL(blob);
+    audio.addEventListener("ended", () => URL.revokeObjectURL(audio.src), { once: true });
+    container.innerHTML = `<p class="voice-note-label">🎧 ${label}</p>`;
+    container.appendChild(audio);
+  } catch {
+    container.innerHTML = `<p class="helper-text">Ses kaydı açılamadı.</p>`;
   }
 }
 
@@ -698,7 +826,8 @@ function reviewTask(taskId, result, button) {
       reviewResult: result,
       approvedByAdultId: adult.id,
       approvedBy: adult.name,
-      reward: 0
+      reward: 0,
+      parentVoiceNote: record.parentVoiceNote || null
     };
     addTransaction(isAccidental ? "task_reopened_accidental" : "task_reopened_incomplete", `${task.title} yeniden denenebilir`, 0, {
       source: "task",
@@ -1231,10 +1360,16 @@ function renderPendingApprovals() {
         <button class="secondary-button" type="button" data-result="incomplete" aria-label="Görevi eksik olarak yeniden aç">↻ Eksik</button>
         <button class="secondary-button" type="button" data-result="accidental" aria-label="Yanlışlıkla işaretlenen görevi yeniden aç">○ Yanlış</button>
       </div>
+      <div class="parent-note-actions">
+        <button class="voice-note-button parent-voice-note-button" type="button">${record.parentVoiceNote ? "🎙️ Mesajı yeniden kaydet" : "🎙️ Rüzgar'a sesli not gönder"}</button>
+      </div>
+      <div class="voice-note-player"></div>
     `;
     row.querySelectorAll("button").forEach((button) => {
-      button.addEventListener("click", () => reviewTask(task.id, button.dataset.result, button));
+      if (button.dataset.result) button.addEventListener("click", () => reviewTask(task.id, button.dataset.result, button));
     });
+    row.querySelector(".parent-voice-note-button").addEventListener("click", (event) => toggleVoiceNoteRecording(task.id, event.currentTarget, "parentVoiceNote"));
+    renderVoiceNotePlayer(row.querySelector(".voice-note-player"), task.id, record, "voiceNote", "Rüzgar'ın sesli notu");
     list.appendChild(row);
   });
 }

@@ -13,6 +13,8 @@ Site: https://hidayetasl.github.io/ruzgar-rutin-oyunu/
 5. Bu sırada Tren Parası gelmez. Anne, baba, anneanne veya dede onay verince puan gelir.
 6. Kazandığı Tren Paralarıyla **Mağaza** bölümünden eşyalar alabilir ve **Dünya** bölümünde tren yolculuğunu izleyebilir.
 
+Rüzgar isterse kontrol bekleyen görevin altında **Sesli not kaydet** düğmesine basıp kısa bir açıklama bırakabilir. Örneğin: “Oyuncaklarımı topladım.” Kayıt bitince ebeveyn bu notu onay ekranından dinler.
+
 ## Anne ne yapar?
 
 1. Üstte, Tren Parası kutusunun yanındaki **Ebeveyn** düğmesine dokunur.
@@ -26,6 +28,8 @@ Her bekleyen görev için şu seçeneklerden birini seçer:
 - **Tamamlandı:** Görevin puanı yalnızca bir kez Rüzgar’ın Tren Parasına eklenir.
 - **Biraz eksik:** Puan verilmez. Görev yeniden yapılabilsin diye açılır.
 - **Yanlışlıkla işaretlendi:** Puan verilmez. Görev yeniden açılır.
+
+Ebeveyn ayrıca **Rüzgar'a sesli not gönder** düğmesine basarak kısa bir mesaj kaydedebilir. Rüzgar bu mesajı kendi görev kartında dinler. Özellikle “Biraz eksik” seçeneğinde neyin eksik kaldığını sakin ve kısa biçimde anlatmak için kullanılabilir.
 
 ## Günlük davranış bonusu
 
@@ -55,6 +59,7 @@ Ebeveyn alanındaki **Ebeveyn PIN’ini sıfırla** seçeneği kullanılabilir. 
 - Daha kolay ulaşmak için tarayıcı menüsünden **Ana Ekrana Ekle** seçeneğini kullanabilirsiniz.
 - Bu sürüm tek cihazda, internet olmasa da çalışacak şekilde tasarlanmıştır. Her telefon kendi verisini tutar.
 - Telefon değiştirirken veya başka telefona geçerken ebeveyn bölümündeki yedekleme seçeneğini kullanın.
+- Sesli notlar gizlilik için yalnızca kaydedildikleri cihazda tutulur; JSON yedeğiyle başka telefona taşınmaz.
 
 ## Küçük öneri
 
