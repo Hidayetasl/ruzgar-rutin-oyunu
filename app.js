@@ -580,7 +580,7 @@ function renderTasks() {
   generalVoiceButton.textContent = generalVoiceMessages("child").length ? "🎙️ Yeni mesaj kaydet" : "🎙️ Baba'ya sesli not bırak";
   generalVoiceButton.onclick = () => toggleVoiceNoteRecording("general-child", generalVoiceButton, "child", { general: true });
   renderGeneralVoiceMessages($("childGeneralVoicePlayer"), "child", "Gönderdiğin sesli notlar");
-  renderGeneralVoiceMessages($("parentGeneralVoicePlayer"), "parent", "🔔 Baba'dan sesli notlar");
+  renderVoiceInbox($("parentGeneralVoicePlayer"), "parent", "Baba'dan");
   activeTasks.forEach((task) => {
     const record = taskRecord(task.id);
     const status = normalizeTaskStatus(record.status);
@@ -730,7 +730,7 @@ async function toggleVoiceNoteRecording(taskId, button, field = "voiceNote", opt
   }
 }
 
-async function renderVoiceNotePlayer(container, taskId, record, field = "voiceNote", label = "Rüzgar'ın sesli notu") {
+async function renderVoiceNotePlayer(container, taskId, record, field = "voiceNote", label = "Rüzgar'ın sesli notu", onPlay = null) {
   if (!record?.[field]) return;
   container.innerHTML = `<p class="voice-note-label">🎧 ${label}</p><p class="helper-text">Ses yükleniyor…</p>`;
   try {
@@ -743,6 +743,7 @@ async function renderVoiceNotePlayer(container, taskId, record, field = "voiceNo
     audio.controls = true;
     audio.preload = "metadata";
     audio.src = URL.createObjectURL(blob);
+    if (onPlay) audio.addEventListener("play", onPlay, { once: true });
     audio.addEventListener("ended", () => URL.revokeObjectURL(audio.src), { once: true });
     container.innerHTML = `<p class="voice-note-label">🎧 ${label}</p>`;
     container.appendChild(audio);
@@ -765,6 +766,49 @@ function renderGeneralVoiceMessages(container, field, label) {
     container.appendChild(item);
     renderVoiceNotePlayer(item, "general", { message }, "message", `${index + 1}. mesaj`);
   });
+}
+
+function markVoiceMessageListened(field, key) {
+  const message = generalVoiceMessages(field).find((item) => item.key === key);
+  if (!message || message.listenedAt) return;
+  message.listenedAt = new Date().toISOString();
+  saveState();
+  window.setTimeout(render, 0);
+}
+
+function renderVoiceInbox(container, field, senderLabel) {
+  const messages = generalVoiceMessages(field).slice().reverse();
+  const inbox = messages.filter((message) => !message.listenedAt);
+  const listened = messages.filter((message) => message.listenedAt);
+  container.innerHTML = "";
+  const addHeading = (text, count) => {
+    const heading = document.createElement("p");
+    heading.className = "voice-note-label";
+    heading.textContent = `${text} (${count})`;
+    container.appendChild(heading);
+  };
+  addHeading(`📥 ${senderLabel} Gelen Kutusu`, inbox.length);
+  if (!inbox.length) {
+    const empty = document.createElement("p");
+    empty.className = "helper-text";
+    empty.textContent = "Yeni sesli mesaj yok.";
+    container.appendChild(empty);
+  }
+  inbox.forEach((message, index) => {
+    const item = document.createElement("div");
+    item.className = "voice-message-item";
+    container.appendChild(item);
+    renderVoiceNotePlayer(item, "general", { message }, "message", `${index + 1}. yeni mesaj`, () => markVoiceMessageListened(field, message.key));
+  });
+  if (listened.length) {
+    addHeading("✅ Dinlenenler", listened.length);
+    listened.forEach((message, index) => {
+      const item = document.createElement("div");
+      item.className = "voice-message-item";
+      container.appendChild(item);
+      renderVoiceNotePlayer(item, "general", { message }, "message", `${index + 1}. dinlenen mesaj`);
+    });
+  }
 }
 
 function isRetryRecord(record) {
@@ -1353,7 +1397,7 @@ function renderParent() {
     const parentVoiceButton = $("parentGeneralVoiceButton");
     parentVoiceButton.textContent = generalVoiceMessages("parent").length ? "🎙️ Yeni mesaj kaydet" : "🎙️ Rüzgar'a sesli not bırak";
     parentVoiceButton.onclick = () => toggleVoiceNoteRecording("general-parent", parentVoiceButton, "parent", { general: true });
-    renderGeneralVoiceMessages($("parentChildVoicePlayer"), "child", "🔔 Rüzgar'ın sesli notları");
+    renderVoiceInbox($("parentChildVoicePlayer"), "child", "Rüzgar'dan");
     renderGeneralVoiceMessages($("parentOwnVoicePlayer"), "parent", "Gönderdiğin sesli notlar");
     renderPendingApprovals();
     renderBonuses();
