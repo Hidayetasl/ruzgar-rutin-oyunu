@@ -899,6 +899,11 @@ select {
   font-weight: 750;
 }
 
+.voice-note-label {
+  color: #a93620;
+  font-weight: 900;
+}
+
 .voice-note-player {
   grid-column: 1 / -1;
   min-width: 0;

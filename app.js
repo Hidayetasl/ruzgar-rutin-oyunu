@@ -574,7 +574,7 @@ function renderTasks() {
   const generalVoiceButton = $("childGeneralVoiceButton");
   generalVoiceButton.textContent = state.voiceMessages.child ? "🎙️ Mesajı yeniden kaydet" : "🎙️ Baba'ya sesli not bırak";
   generalVoiceButton.onclick = () => toggleVoiceNoteRecording("general-child", generalVoiceButton, "child", { general: true });
-  renderVoiceNotePlayer($("parentGeneralVoicePlayer"), "general-parent", state.voiceMessages, "parent", "Baba'dan sesli not");
+  renderVoiceNotePlayer($("parentGeneralVoicePlayer"), "general-parent", state.voiceMessages, "parent", "🔔 Baba'dan sesli not var");
   activeTasks.forEach((task) => {
     const record = taskRecord(task.id);
     const status = normalizeTaskStatus(record.status);
@@ -1324,7 +1324,7 @@ function renderParent() {
     const parentVoiceButton = $("parentGeneralVoiceButton");
     parentVoiceButton.textContent = state.voiceMessages.parent ? "🎙️ Mesajı yeniden kaydet" : "🎙️ Rüzgar'a sesli not bırak";
     parentVoiceButton.onclick = () => toggleVoiceNoteRecording("general-parent", parentVoiceButton, "parent", { general: true });
-    renderVoiceNotePlayer($("childGeneralVoicePlayer"), "general-child", state.voiceMessages, "child", "Rüzgar'ın sesli notu");
+    renderVoiceNotePlayer($("childGeneralVoicePlayer"), "general-child", state.voiceMessages, "child", "🔔 Rüzgar'ın sesli notu var");
     renderPendingApprovals();
     renderBonuses();
   }
