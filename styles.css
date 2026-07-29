@@ -855,20 +855,33 @@ select {
 
 .voice-message-card {
   display: grid;
-  gap: 8px;
-  margin: 0 0 14px;
-  padding: 14px;
+  gap: 5px;
+  margin: 0 0 9px;
+  padding: 9px 10px;
   border: 2px solid #b8e2f8;
-  border-radius: 18px;
+  border-radius: 14px;
   background: linear-gradient(135deg, #f5fcff, #eef8ff);
 }
 
 .voice-message-card h3 {
   margin: 0;
+  font-size: 1rem;
 }
 
 .voice-message-card .helper-text {
-  margin: 4px 0 0;
+  margin: 1px 0 0;
+  font-size: 0.78rem;
+}
+
+.voice-message-card .eyebrow {
+  margin: 0;
+  font-size: 0.68rem;
+}
+
+.voice-message-card .voice-note-button {
+  min-height: 44px;
+  margin-top: 2px;
+  font-size: 0.9rem;
 }
 
 .voice-note-button.is-recording {
