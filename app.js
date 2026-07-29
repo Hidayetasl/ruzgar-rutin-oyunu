@@ -143,6 +143,7 @@ document.addEventListener("DOMContentLoaded", () => {
   migrateForToday();
   bindEvents();
   render();
+  restoreLegacyGeneralVoiceNotes();
   registerServiceWorker();
   maybeShowMorning();
 });
@@ -683,6 +684,28 @@ async function loadVoiceNote(key) {
     request.onsuccess = () => { db.close(); resolve(request.result || null); };
     request.onerror = () => { db.close(); reject(request.error || new Error("Ses kaydı okunamadı.")); };
   });
+}
+
+async function restoreLegacyGeneralVoiceNotes() {
+  let restored = false;
+  for (const field of ["child", "parent"]) {
+    const key = `general-${field}`;
+    const messages = generalVoiceMessages(field);
+    if (messages.some((message) => message.key === key)) continue;
+    try {
+      const blob = await loadVoiceNote(key);
+      if (!blob) continue;
+      messages.push({ key, createdAt: new Date().toISOString(), mimeType: blob.type, restored: true });
+      restored = true;
+    } catch {
+      // Eski kayıt alanı yoksa uygulamanın normal akışı etkilenmez.
+    }
+  }
+  if (restored) {
+    saveState();
+    render();
+    showToast("Önceki sesli not geri yüklendi.");
+  }
 }
 
 async function toggleVoiceNoteRecording(taskId, button, field = "voiceNote", options = {}) {
