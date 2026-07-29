@@ -165,6 +165,7 @@ function emptyState() {
     },
     lastDailyReset: today,
     lastMorningAnimation: "",
+    voiceMessages: { child: null, parent: null },
     undoHistory: []
   };
 }
@@ -207,6 +208,7 @@ function normalizeState(raw) {
   merged.map.placed = Array.isArray(merged.map.placed) ? merged.map.placed : [];
   merged.train = { ...base.train, ...(raw.train || {}) };
   merged.train.wagons = Array.isArray(merged.train.wagons) ? merged.train.wagons : [];
+  merged.voiceMessages = { child: null, parent: null, ...(raw.voiceMessages || {}) };
   merged.undoHistory = Array.isArray(raw.undoHistory) ? raw.undoHistory : [];
   merged.balance = Math.max(0, Number(raw.balance) || 0);
   merged.parentPinHash = raw.parentPinHash || "";
@@ -569,6 +571,10 @@ function renderTasks() {
   const grid = $("taskGrid");
   grid.innerHTML = "";
   const activeTasks = state.tasks.filter((task) => task.active);
+  const generalVoiceButton = $("childGeneralVoiceButton");
+  generalVoiceButton.textContent = state.voiceMessages.child ? "🎙️ Mesajı yeniden kaydet" : "🎙️ Anne'ye sesli not bırak";
+  generalVoiceButton.onclick = () => toggleVoiceNoteRecording("general-child", generalVoiceButton, "child", { general: true });
+  renderVoiceNotePlayer($("parentGeneralVoicePlayer"), "general-parent", state.voiceMessages, "parent", "Anne'den sesli not");
   activeTasks.forEach((task) => {
     const record = taskRecord(task.id);
     const status = normalizeTaskStatus(record.status);
@@ -650,7 +656,7 @@ async function loadVoiceNote(key) {
   });
 }
 
-async function toggleVoiceNoteRecording(taskId, button, field = "voiceNote") {
+async function toggleVoiceNoteRecording(taskId, button, field = "voiceNote", options = {}) {
   if (voiceRecording?.taskId === taskId) {
     button.disabled = true;
     button.textContent = "Kaydediliyor…";
@@ -683,18 +689,20 @@ async function toggleVoiceNoteRecording(taskId, button, field = "voiceNote") {
         render();
         return;
       }
-      const record = taskRecord(taskId);
-      if (!record || record.status !== "pendingApproval") {
+      const record = options.general ? state.voiceMessages : taskRecord(taskId);
+      if (!options.general && (!record || record.status !== "pendingApproval")) {
         showToast("Bu görev artık kontrol beklemiyor.");
         render();
         return;
       }
-      const key = voiceNoteKey(taskId, record, field);
+      const key = options.general ? `general-${field}` : voiceNoteKey(taskId, record, field);
       try {
         await saveVoiceNote(key, blob);
         record[field] = { key, createdAt: new Date().toISOString(), mimeType: blob.type };
         saveState();
-        showToast(field === "parentVoiceNote" ? "Sesli not Rüzgar için kaydedildi." : "Sesli not ebeveyn için kaydedildi.");
+        showToast(options.general
+          ? (field === "parent" ? "Sesli not Rüzgar için kaydedildi." : "Sesli not ebeveyn için kaydedildi.")
+          : (field === "parentVoiceNote" ? "Sesli not Rüzgar için kaydedildi." : "Sesli not ebeveyn için kaydedildi."));
       } catch {
         showToast("Ses kaydı bu cihazda saklanamadı.");
       }
@@ -1313,6 +1321,10 @@ function renderParent() {
   }
   if (adultActive) {
     renderApprovalSummary();
+    const parentVoiceButton = $("parentGeneralVoiceButton");
+    parentVoiceButton.textContent = state.voiceMessages.parent ? "🎙️ Mesajı yeniden kaydet" : "🎙️ Rüzgar'a sesli not bırak";
+    parentVoiceButton.onclick = () => toggleVoiceNoteRecording("general-parent", parentVoiceButton, "parent", { general: true });
+    renderVoiceNotePlayer($("childGeneralVoicePlayer"), "general-child", state.voiceMessages, "child", "Rüzgar'ın sesli notu");
     renderPendingApprovals();
     renderBonuses();
   }

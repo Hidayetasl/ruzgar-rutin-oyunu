@@ -853,6 +853,24 @@ select {
   font-weight: 850;
 }
 
+.voice-message-card {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 14px;
+  border: 2px solid #b8e2f8;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #f5fcff, #eef8ff);
+}
+
+.voice-message-card h3 {
+  margin: 0;
+}
+
+.voice-message-card .helper-text {
+  margin: 4px 0 0;
+}
+
 .voice-note-button.is-recording {
   border-color: #ed6a5a;
   color: #8b1e12;
