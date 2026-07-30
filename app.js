@@ -39,6 +39,7 @@ const DEFAULT_TASKS = [
 const DEFAULT_SHOP_ITEMS = [
   { id: "decor", title: "Ağaç, çiçek veya tabela", icon: "🌳", price: 1, type: "decor", active: true },
   { id: "rail", title: "Kısa ray parçası", icon: "🛤️", price: 2, type: "rail", active: true },
+  { id: "curved-rail", title: "Kıvrımlı ray parçası", icon: "↪️", price: 2, type: "rail", active: true },
   { id: "signal", title: "Sinyal lambası", icon: "🚦", price: 3, type: "signal", active: true },
   { id: "home", title: "Küçük ev veya hayvan", icon: "🏠", price: 3, type: "decor", active: true },
   { id: "switch", title: "Demiryolu makası", icon: "🔀", price: 5, type: "switch", active: true },
